@@ -2,7 +2,7 @@
   "name": "vscode-advanced-open-file",
   "displayName": "vscode-advanced-open-file",
   "description": "",
-  "version": "0.3.1",
+  "version": "0.3.3-6a3f116",
   "publisher": "jit-y",
   "repository": {
     "type": "git",
@@ -76,7 +76,7 @@
     "mocha": "^10.1.0",
     "prettier": "^2.8.0",
     "typescript": "^4.9.3",
-    "vsce": "^2.14.0",
+    "vsce": "^1.50.0",
     "vscode-test": "^1.6.1"
   }
 }
