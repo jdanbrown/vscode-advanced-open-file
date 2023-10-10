@@ -47,6 +47,8 @@ export class AdvancedOpenFile {
 
   initPicker(): QuickPick<FileItem> {
     const picker: QuickPick<FileItem> = vscode.window.createQuickPick();
+    // picker.onDidChangeActive(this.onDidChangeActive.bind(this));
+    // picker.onDidChangeSelection(this.onDidChangeSelection.bind(this));
     picker.onDidChangeValue(this.onDidChangeValue.bind(this));
     picker.onDidAccept(this.onDidAccept.bind(this));
     picker.onDidHide(this.onDidHide.bind(this));
@@ -63,6 +65,20 @@ export class AdvancedOpenFile {
   }
 
   onDidChangeValue(value: string) {
+    // async onDidChangeActive(items: readonly FileItem[]) {
+    //   console.log("[XXX] onDidChangeActive", {
+    //     items,
+    //     item0: items[0]?.absolutePath,
+    //   });
+    // }
+
+    // async onDidChangeSelection(items: readonly FileItem[]) {
+    //   console.log("[XXX] onDidChangeSelection", {
+    //     items,
+    //     item0: items[0]?.absolutePath,
+    //   });
+    // }
+
     createFileItems(value).then((items: ReadonlyArray<FileItem>) => {
       this.picker.items = items;
     });
