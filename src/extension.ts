@@ -5,25 +5,35 @@ import { commands, ExtensionContext, Uri } from "vscode";
 import { AdvancedOpenFile, activeInstance } from "./advancedOpenFile";
 
 async function pathToCurrentDirectory(): Promise<string> {
-  // activeTextEditor is undefined if there are no text editors
-  //  - (I wish we could also get the cwd of activeTerminal)
-  const currentEditor = vscode.window.activeTextEditor;
-  if (currentEditor) {
-    return Path.dirname(currentEditor.document.uri.path);
+  // Get dir from active text/notebook editor
+  //  - activeTextEditor is undefined if there are no text editors
+  //  - activeNotebookEditor is undefined if there are no notebook editors
+  const currentEditorUri =
+    vscode.window.activeTextEditor?.document.uri ||
+    vscode.window.activeNotebookEditor?.notebook.uri;
+  if (currentEditorUri) {
+    return Path.dirname(currentEditorUri.path);
   }
+
+  // TODO Get cwd from terminal (which vscode tracks internally but doesn't yet expose)
+  //  - Need: https://github.com/microsoft/vscode/issues/145234 Expose shell integration command knowledge to extensions
+  //  - Need: https://github.com/microsoft/vscode/issues/191924 Expose terminal's detected cwd to extensions
 
   // If no active text editors, just use the workspace dir (which falls back to the home dir)
   return await pathToCurrentWorkspace();
 }
 
 async function pathToCurrentWorkspace(): Promise<string> {
-  // activeTextEditor is undefined if there are no text editors
-  const currentEditor = vscode.window.activeTextEditor;
-  if (currentEditor) {
+  // Get dir from active text/notebook editor
+  //  - activeTextEditor is undefined if there are no text editors
+  //  - activeNotebookEditor is undefined if there are no notebook editors
+  const currentEditorUri =
+    vscode.window.activeTextEditor?.document.uri ||
+    vscode.window.activeNotebookEditor?.notebook.uri;
+  if (currentEditorUri) {
     // getWorkspaceFolder returns undefined if url matches no workspace folder
-    const workspaceFolder = vscode.workspace.getWorkspaceFolder(
-      currentEditor.document.uri
-    );
+    const workspaceFolder =
+      vscode.workspace.getWorkspaceFolder(currentEditorUri);
     if (workspaceFolder) {
       return workspaceFolder.uri.path;
     }
