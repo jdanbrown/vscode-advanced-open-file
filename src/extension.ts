@@ -1,7 +1,7 @@
 import * as Path from "path";
 import * as vscode from "vscode";
 import { commands, ExtensionContext, WorkspaceFolder, Uri } from "vscode";
-import { AdvancedOpenFile } from "./advancedOpenFile";
+import { AdvancedOpenFile, activeInstance } from "./advancedOpenFile";
 
 async function pickWorkspace(): Promise<string> {
   const targetWorkspaceFolder: WorkspaceFolder | undefined =

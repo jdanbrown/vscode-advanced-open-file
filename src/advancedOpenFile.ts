@@ -4,6 +4,8 @@ import * as vscode from "vscode";
 import { FileType, QuickPick, Uri } from "vscode";
 import { FileItem, createFileItems } from "./fileItem";
 
+export let activeInstance: AdvancedOpenFile | null = null;
+
 export class AdvancedOpenFile {
   private currentPath: Uri;
   private picker: QuickPick<FileItem>;
@@ -14,6 +16,8 @@ export class AdvancedOpenFile {
   }
 
   async pick() {
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
+    activeInstance = this;
     this.show();
 
     this.picker.value = this.currentPath.fsPath;
@@ -67,6 +71,7 @@ export class AdvancedOpenFile {
   }
 
   onDidHide() {
+    activeInstance = null;
     this.dispose();
   }
 
