@@ -91,6 +91,17 @@ export class AdvancedOpenFile {
     this.picker.value = ensureEndsWithPathSep(Path.dirname(this.picker.value));
   }
 
+  async tabComplete() {
+    const activeItem = this.picker.activeItems[0];
+    if (activeItem) {
+      let path = activeItem.absolutePath;
+      if ((activeItem.filetype & FileType.Directory) > 0) {
+        path = ensureEndsWithPathSep(path);
+      }
+      this.picker.value = path;
+    }
+  }
+
   createFile() {
     this.dispose();
 

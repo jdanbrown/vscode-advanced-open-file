@@ -64,6 +64,9 @@ export function activate(context: ExtensionContext) {
     commands.registerCommand(
       "extension.advancedOpenFile.deletePathComponent",
       () => activeInstance?.deletePathComponent()
+    ),
+    commands.registerCommand("extension.advancedOpenFile.tabComplete", () =>
+      activeInstance?.tabComplete()
     )
   );
 }
