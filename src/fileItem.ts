@@ -28,6 +28,8 @@ export class FileItem implements QuickPickItem {
 export async function createFileItems(
   pathname: string
 ): Promise<ReadonlyArray<FileItem>> {
+  const config = vscode.workspace.getConfiguration();
+
   let directory = pathname;
   let fragment = "";
 
@@ -85,7 +87,9 @@ export async function createFileItems(
     os.platform() === "win32" ? process.cwd().split(path.sep)[0] : "/";
   if (!fragment && directory !== fsRoot) {
     const parent = path.dirname(directory);
-    filePickItems.unshift(new FileItem(parent, FileType.Directory, ".."));
+    if (config.get("vscode-advanced-open-file.includeDotDotItemForParent")) {
+      filePickItems.unshift(new FileItem(parent, FileType.Directory, ".."));
+    }
   }
 
   return filePickItems;

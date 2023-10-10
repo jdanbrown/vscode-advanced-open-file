@@ -40,6 +40,11 @@
           "type": "boolean",
           "default": false,
           "description": "Group directories before files"
+        },
+        "vscode-advanced-open-file.includeDotDotItemForParent": {
+          "type": "boolean",
+          "default": true,
+          "description": "Include a '..' item for the parent directory"
         }
       }
     }
