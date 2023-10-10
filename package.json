@@ -41,6 +41,11 @@
         "command": "extension.advancedOpenFile.tabComplete",
         "key": "tab",
         "when": "extension.advancedOpenFile.active"
+      },
+      {
+        "command": "extension.advancedOpenFile.addCurrentFolderToWorkspace",
+        "key": "ctrl+a",
+        "when": "extension.advancedOpenFile.active"
       }
     ],
     "configuration": {

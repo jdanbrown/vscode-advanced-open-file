@@ -67,6 +67,10 @@ export function activate(context: ExtensionContext) {
     ),
     commands.registerCommand("extension.advancedOpenFile.tabComplete", () =>
       activeInstance?.tabComplete()
+    ),
+    commands.registerCommand(
+      "extension.advancedOpenFile.addCurrentFolderToWorkspace",
+      () => activeInstance?.addCurrentFolderToWorkspace()
     )
   );
 }

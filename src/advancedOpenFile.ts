@@ -18,6 +18,15 @@ function ensureEndsWithPathSep(path: string): string {
   return ensureEndsWith(path, Path.sep);
 }
 
+async function fileExists(uri: Uri): Promise<boolean> {
+  try {
+    await vscode.workspace.fs.stat(uri);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
 export class AdvancedOpenFile {
   private currentPath: Uri;
   private picker: QuickPick<FileItem>;
@@ -99,6 +108,26 @@ export class AdvancedOpenFile {
         path = ensureEndsWithPathSep(path);
       }
       this.picker.value = path;
+    }
+  }
+
+  async addCurrentFolderToWorkspace() {
+    const dirPath = this.picker.value;
+    if (dirPath.endsWith(Path.sep)) {
+      const dirUri = Uri.file(dirPath);
+      if (await fileExists(dirUri)) {
+        this.dispose();
+        // Adding a workspace folder requires this bit of crazy
+        //  - https://code.visualstudio.com/api/references/vscode-api#workspace
+        vscode.workspace.updateWorkspaceFolders(
+          vscode.workspace.workspaceFolders?.length ?? 0,
+          null,
+          { uri: dirUri }
+        );
+        vscode.window.showInformationMessage(
+          `Added folder to workspace: ${dirPath}`
+        );
+      }
     }
   }
 
