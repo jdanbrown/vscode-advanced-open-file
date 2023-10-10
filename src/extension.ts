@@ -56,12 +56,14 @@ async function advancedOpenWorkspaceFile(): Promise<void> {
 
 export function activate(context: ExtensionContext) {
   context.subscriptions.push(
-    commands.registerCommand("extension.advancedOpenFile", advancedOpenFile)
-  );
-  context.subscriptions.push(
+    commands.registerCommand("extension.advancedOpenFile", advancedOpenFile),
     commands.registerCommand(
       "extension.advancedOpenWorkspaceFile",
       advancedOpenWorkspaceFile
+    ),
+    commands.registerCommand(
+      "extension.advancedOpenFile.deletePathComponent",
+      () => activeInstance?.deletePathComponent()
     )
   );
 }

@@ -6,6 +6,18 @@ import { FileItem, createFileItems } from "./fileItem";
 
 export let activeInstance: AdvancedOpenFile | null = null;
 
+function ensureEndsWith(s: string, endsWith: string): string {
+  if (s.endsWith(endsWith)) {
+    return s;
+  } else {
+    return s + endsWith;
+  }
+}
+
+function ensureEndsWithPathSep(path: string): string {
+  return ensureEndsWith(path, Path.sep);
+}
+
 export class AdvancedOpenFile {
   private currentPath: Uri;
   private picker: QuickPick<FileItem>;
@@ -73,6 +85,10 @@ export class AdvancedOpenFile {
   onDidHide() {
     activeInstance = null;
     this.dispose();
+  }
+
+  async deletePathComponent() {
+    this.picker.value = ensureEndsWithPathSep(Path.dirname(this.picker.value));
   }
 
   createFile() {
