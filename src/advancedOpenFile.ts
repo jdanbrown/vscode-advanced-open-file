@@ -131,6 +131,28 @@ export class AdvancedOpenFile {
     }
   }
 
+  async deleteActiveFile() {
+    const activeItem = this.picker.activeItems[0];
+    if (activeItem) {
+      this.dispose();
+      vscode.commands.executeCommand(
+        "fileutils.removeFile",
+        Uri.file(activeItem.absolutePath)
+      );
+    }
+  }
+
+  async moveActiveFile() {
+    const activeItem = this.picker.activeItems[0];
+    if (activeItem) {
+      this.dispose();
+      vscode.commands.executeCommand(
+        "fileutils.moveFile",
+        Uri.file(activeItem.absolutePath)
+      );
+    }
+  }
+
   createFile() {
     this.dispose();
 

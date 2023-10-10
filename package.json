@@ -46,6 +46,16 @@
         "command": "extension.advancedOpenFile.addCurrentFolderToWorkspace",
         "key": "ctrl+a",
         "when": "extension.advancedOpenFile.active"
+      },
+      {
+        "command": "extension.advancedOpenFile.deleteActiveFile",
+        "key": "ctrl+d",
+        "when": "extension.advancedOpenFile.active"
+      },
+      {
+        "command": "extension.advancedOpenFile.moveActiveFile",
+        "key": "ctrl+m",
+        "when": "extension.advancedOpenFile.active"
       }
     ],
     "configuration": {

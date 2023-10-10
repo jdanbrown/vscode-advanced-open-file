@@ -71,6 +71,13 @@ export function activate(context: ExtensionContext) {
     commands.registerCommand(
       "extension.advancedOpenFile.addCurrentFolderToWorkspace",
       () => activeInstance?.addCurrentFolderToWorkspace()
+    ),
+    commands.registerCommand(
+      "extension.advancedOpenFile.deleteActiveFile",
+      () => activeInstance?.deleteActiveFile()
+    ),
+    commands.registerCommand("extension.advancedOpenFile.moveActiveFile", () =>
+      activeInstance?.moveActiveFile()
     )
   );
 }
