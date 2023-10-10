@@ -70,6 +70,21 @@
           "type": "boolean",
           "default": true,
           "description": "Include a '..' item for the parent directory"
+        },
+        "vscode-advanced-open-file.matchType": {
+          "type": "string",
+          "description": "How to match file/directory names",
+          "default": "prefix",
+          "enum": [
+            "prefix",
+            "contiguous",
+            "sparse"
+          ],
+          "enumDescriptions": [
+            "Contain the entered text as a prefix",
+            "Contain the entered text anywhere as a contiguous substring",
+            "Contain the entered text anywhere as a non-contiguous substring"
+          ]
         }
       }
     }
@@ -90,6 +105,7 @@
   },
   "devDependencies": {
     "@types/glob": "^8.0.0",
+    "@types/lodash": "^4.14.199",
     "@types/mocha": "^10.0.0",
     "@types/node": "^12.12.11",
     "@types/vscode": "^1.83.0",
@@ -105,5 +121,8 @@
     "typescript": "^4.9.3",
     "vsce": "^1.50.0",
     "vscode-test": "^1.6.1"
+  },
+  "dependencies": {
+    "lodash": "^4.17.21"
   }
 }

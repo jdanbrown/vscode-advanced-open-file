@@ -1,3 +1,4 @@
+import * as _ from "lodash";
 import * as path from "path";
 import * as os from "os";
 import * as vscode from "vscode";
@@ -25,10 +26,28 @@ export class FileItem implements QuickPickItem {
   }
 }
 
+async function readDirectoryIfExists(
+  uri: Uri
+): Promise<Array<[string, FileType]> | null> {
+  try {
+    return await vscode.workspace.fs.readDirectory(uri);
+  } catch (e) {
+    if (e instanceof vscode.FileSystemError && e.code === "FileNotFound") {
+      return null;
+    } else {
+      throw e;
+    }
+  }
+}
+
 export async function createFileItems(
   pathname: string
 ): Promise<ReadonlyArray<FileItem>> {
   const config = vscode.workspace.getConfiguration();
+
+  const matchType: string | undefined = config.get<string>(
+    "vscode-advanced-open-file.matchType"
+  );
 
   let directory = pathname;
   let fragment = "";
@@ -38,15 +57,42 @@ export async function createFileItems(
     fragment = path.basename(pathname);
   }
 
-  const uri = Uri.file(directory);
-  const files = await vscode.workspace.fs.readDirectory(uri);
-  const matchedFiles = files.filter((fileArr) => {
-    const f = fileArr[0];
-    if (fragment.toLowerCase() === fragment) {
-      return f.toLowerCase().startsWith(fragment);
+  const isMatch = (() => {
+    switch (matchType) {
+      case "contiguous": {
+        return (filename: string) => filename.includes(fragment);
+      }
+      case "sparse": {
+        const regexp = new RegExp(
+          fragment
+            .split("")
+            .map((s) => _.escapeRegExp(s))
+            .join(".*")
+        );
+        return (filename: string) => regexp.test(filename);
+      }
+      case "prefix": {
+        return (filename: string) => filename.startsWith(fragment);
+      }
+      default: {
+        console.error(
+          "[vscode-advanced-open-file] Unexpected value for matchType",
+          { matchType }
+        );
+        return (filename: string) => filename.startsWith(fragment);
+      }
     }
+  })();
 
-    return f.startsWith(fragment);
+  const uri = Uri.file(directory);
+  const files = (await readDirectoryIfExists(uri)) || [];
+  const matchedFiles = files.filter((entry) => {
+    let [filename] = entry;
+    // Smart case
+    if (fragment.toLowerCase() === fragment) {
+      filename = filename.toLowerCase();
+    }
+    return isMatch(filename);
   });
 
   const filePickItems = await Promise.all(
@@ -61,11 +107,7 @@ export async function createFileItems(
   );
 
   // Group directories first if desired
-  if (
-    vscode.workspace
-      .getConfiguration()
-      .get("vscode-advanced-open-file.groupDirectoriesFirst")
-  ) {
+  if (config.get("vscode-advanced-open-file.groupDirectoriesFirst")) {
     filePickItems.sort((fileA, fileB) => {
       if (
         fileA.filetype === FileType.Directory &&
