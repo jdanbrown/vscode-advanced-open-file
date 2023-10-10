@@ -1,65 +1,66 @@
+import * as os from "os";
 import * as Path from "path";
 import * as vscode from "vscode";
-import { commands, ExtensionContext, WorkspaceFolder, Uri } from "vscode";
+import { commands, ExtensionContext, Uri } from "vscode";
 import { AdvancedOpenFile, activeInstance } from "./advancedOpenFile";
 
-async function pickWorkspace(): Promise<string> {
-  const targetWorkspaceFolder: WorkspaceFolder | undefined =
-    await vscode.window.showWorkspaceFolderPick();
-  if (targetWorkspaceFolder === undefined) {
-    throw new Error("No workspace is opened.");
-  }
-
-  return targetWorkspaceFolder.uri.path;
-}
-
 async function pathToCurrentDirectory(): Promise<string> {
+  // activeTextEditor is undefined if there are no text editors
+  //  - (I wish we could also get the cwd of activeTerminal)
   const currentEditor = vscode.window.activeTextEditor;
   if (currentEditor) {
     return Path.dirname(currentEditor.document.uri.path);
   }
 
-  return pickWorkspace();
+  // If no active text editors, just use the workspace dir (which falls back to the home dir)
+  return await pathToCurrentWorkspace();
 }
 
 async function pathToCurrentWorkspace(): Promise<string> {
+  // activeTextEditor is undefined if there are no text editors
   const currentEditor = vscode.window.activeTextEditor;
   if (currentEditor) {
-    const folder = vscode.workspace.getWorkspaceFolder(
+    // getWorkspaceFolder returns undefined if url matches no workspace folder
+    const workspaceFolder = vscode.workspace.getWorkspaceFolder(
       currentEditor.document.uri
     );
-    if (folder === undefined) {
-      throw new Error("No workspace exists");
+    if (workspaceFolder) {
+      return workspaceFolder.uri.path;
     }
-
-    return folder.uri.path;
   }
 
-  return pickWorkspace();
+  // workspaceFolders is undefined if no workspace is opened
+  // workspaceFolders is [] if a workspace is opened but it has no folders
+  const workspaceFolders = vscode.workspace.workspaceFolders;
+  if (workspaceFolders && workspaceFolders[0]) {
+    return workspaceFolders[0].uri.path;
+  }
+
+  // Nothing worked, so fall back to the user's home dir so that we always return something
+  return os.homedir();
 }
 
-async function advancedOpenFile(): Promise<void> {
-  let defaultDir = await pathToCurrentDirectory();
-  defaultDir += Path.sep;
+const advancedOpenFile = (startAt: "cwd" | "workspace") => async () => {
+  const workspaceDir = await pathToCurrentWorkspace();
+  const startingDir =
+    startAt === "workspace" ? workspaceDir : await pathToCurrentDirectory();
 
-  const f = new AdvancedOpenFile(Uri.file(defaultDir));
+  const f = new AdvancedOpenFile(
+    Uri.file(workspaceDir + Path.sep),
+    Uri.file(startingDir + Path.sep)
+  );
   f.pick();
-}
-
-async function advancedOpenWorkspaceFile(): Promise<void> {
-  let defaultDir = await pathToCurrentWorkspace();
-  defaultDir += Path.sep;
-
-  const f = new AdvancedOpenFile(Uri.file(defaultDir));
-  f.pick();
-}
+};
 
 export function activate(context: ExtensionContext) {
   context.subscriptions.push(
-    commands.registerCommand("extension.advancedOpenFile", advancedOpenFile),
+    commands.registerCommand(
+      "extension.advancedOpenFile",
+      advancedOpenFile("cwd")
+    ),
     commands.registerCommand(
       "extension.advancedOpenWorkspaceFile",
-      advancedOpenWorkspaceFile
+      advancedOpenFile("workspace")
     ),
     commands.registerCommand(
       "extension.advancedOpenFile.deletePathComponent",
@@ -71,6 +72,9 @@ export function activate(context: ExtensionContext) {
     commands.registerCommand(
       "extension.advancedOpenFile.addCurrentFolderToWorkspace",
       () => activeInstance?.addCurrentFolderToWorkspace()
+    ),
+    commands.registerCommand("extension.advancedOpenFile.newFile", () =>
+      activeInstance?.newFile()
     ),
     commands.registerCommand(
       "extension.advancedOpenFile.deleteActiveFile",

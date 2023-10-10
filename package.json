@@ -48,6 +48,11 @@
         "when": "extension.advancedOpenFile.active"
       },
       {
+        "command": "extension.advancedOpenFile.newFile",
+        "key": "ctrl+n",
+        "when": "extension.advancedOpenFile.active"
+      },
+      {
         "command": "extension.advancedOpenFile.deleteActiveFile",
         "key": "ctrl+d",
         "when": "extension.advancedOpenFile.active"

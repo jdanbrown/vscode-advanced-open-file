@@ -6,6 +6,10 @@ import { FileItem, createFileItems } from "./fileItem";
 
 export let activeInstance: AdvancedOpenFile | null = null;
 
+function getFsRoot(): string {
+  return os.platform() === "win32" ? process.cwd().split(Path.sep)[0] : "/";
+}
+
 function ensureEndsWith(s: string, endsWith: string): string {
   if (s.endsWith(endsWith)) {
     return s;
@@ -28,20 +32,29 @@ async function fileExists(uri: Uri): Promise<boolean> {
 }
 
 export class AdvancedOpenFile {
+  private workspaceDir: Uri;
   private currentPath: Uri;
   private picker: QuickPick<FileItem>;
 
-  constructor(uri: Uri) {
+  constructor(workspaceDir: Uri, currentPath: Uri) {
     this.picker = this.initPicker();
-    this.currentPath = uri;
+    this.workspaceDir = workspaceDir;
+    this.currentPath = currentPath;
   }
 
   async pick() {
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     activeInstance = this;
+    // Expose custom keys for "when" clauses in keybindings
+    //  - https://code.visualstudio.com/api/references/when-clause-contexts#add-a-custom-when-clause-context
+    vscode.commands.executeCommand(
+      "setContext",
+      "extension.advancedOpenFile.active",
+      true
+    );
     this.show();
 
-    this.picker.value = this.currentPath.fsPath;
+    this.picker.value = ensureEndsWithPathSep(this.currentPath.fsPath);
     this.picker.items = await createFileItems(this.currentPath.fsPath);
   }
 
@@ -64,51 +77,68 @@ export class AdvancedOpenFile {
     this.picker.dispose();
   }
 
-  onDidChangeValue(value: string) {
-    // async onDidChangeActive(items: readonly FileItem[]) {
-    //   console.log("[XXX] onDidChangeActive", {
-    //     items,
-    //     item0: items[0]?.absolutePath,
-    //   });
-    // }
+  // async onDidChangeActive(items: readonly FileItem[]) {
+  //   console.log("[XXX] onDidChangeActive", {
+  //     items,
+  //     item0: items[0]?.absolutePath,
+  //   });
+  // }
 
-    // async onDidChangeSelection(items: readonly FileItem[]) {
-    //   console.log("[XXX] onDidChangeSelection", {
-    //     items,
-    //     item0: items[0]?.absolutePath,
-    //   });
-    // }
+  // async onDidChangeSelection(items: readonly FileItem[]) {
+  //   console.log("[XXX] onDidChangeSelection", {
+  //     items,
+  //     item0: items[0]?.absolutePath,
+  //   });
+  // }
 
-    createFileItems(value).then((items: ReadonlyArray<FileItem>) => {
-      this.picker.items = items;
-    });
-  }
+  async onDidChangeValue(value: string) {
+    // console.log("[XXX] onDidChangeValue", { value });
 
-  onDidAccept() {
-    const pickedItem = this.picker.selectedItems[0];
-    const newFilepath = this.picker.value;
-
-    if (pickedItem) {
-      if ((pickedItem.filetype & FileType.File) > 0) {
-        this.currentPath = Uri.file(pickedItem.absolutePath);
-        this.openFile();
-      } else {
-        const fsRoot =
-          os.platform() === "win32" ? process.cwd().split(Path.sep)[0] : "/";
-        const path =
-          pickedItem.absolutePath +
-          (pickedItem.absolutePath === fsRoot ? "" : Path.sep);
-        this.currentPath = Uri.file(path);
-        this.pick();
-      }
+    // Special path handling
+    //  - "" -> show no items (to avoid confusion)
+    //  - "...//" -> rewrite to fs root
+    //  - ".../~/" -> rewrite to home dir
+    //  - ".../:/" -> rewrite to project root dir
+    if (value === "") {
+      this.picker.items = [];
+    } else if (value.endsWith(`${Path.sep}${Path.sep}`)) {
+      this.picker.value = ensureEndsWithPathSep(getFsRoot());
+    } else if (value.endsWith(`${Path.sep}~${Path.sep}`) || value === "~") {
+      this.picker.value = ensureEndsWithPathSep(os.homedir());
+    } else if (value.endsWith(`${Path.sep}:${Path.sep}`) || value === ":") {
+      this.picker.value = ensureEndsWithPathSep(this.workspaceDir.path);
     } else {
-      this.currentPath = Uri.file(newFilepath);
-      this.createFile();
+      // List matching files
+      createFileItems(value).then((items: ReadonlyArray<FileItem>) => {
+        this.picker.items = items;
+      });
     }
   }
 
-  onDidHide() {
+  async onDidAccept() {
+    // console.log("[XXX] onDidAccept", {value: this.picker.value, selectedItem: this.picker.selectedItems[0]?.absolutePath});
+    const pickedItem = this.picker.selectedItems[0];
+    if (pickedItem) {
+      if ((pickedItem.filetype & FileType.File) > 0) {
+        this.dispose();
+        this.openFile(Uri.file(pickedItem.absolutePath));
+      } else {
+        const path =
+          pickedItem.absolutePath +
+          (pickedItem.absolutePath === getFsRoot() ? "" : Path.sep);
+        this.currentPath = Uri.file(path);
+        this.pick();
+      }
+    }
+  }
+
+  async onDidHide() {
     activeInstance = null;
+    await vscode.commands.executeCommand(
+      "setContext",
+      "extension.advancedOpenFile.active",
+      false
+    );
     this.dispose();
   }
 
@@ -147,6 +177,18 @@ export class AdvancedOpenFile {
     }
   }
 
+  async newFile() {
+    const path = this.picker.value;
+    if (
+      path &&
+      !path.endsWith(Path.sep) &&
+      !(await fileExists(Uri.file(path)))
+    ) {
+      this.dispose();
+      await this.createFile(path);
+    }
+  }
+
   async deleteActiveFile() {
     const activeItem = this.picker.activeItems[0];
     if (activeItem) {
@@ -169,28 +211,24 @@ export class AdvancedOpenFile {
     }
   }
 
-  createFile() {
-    this.dispose();
-
-    const path = this.currentPath.fsPath;
-    const parts = path.split(Path.sep);
-    const fragment = parts[parts.length - 1];
-    const directory = Uri.file(
-      path.substring(0, path.length - fragment.length)
-    );
-
-    vscode.workspace.fs.createDirectory(directory).then(() => {
-      const uri = Uri.file(path);
-      const content = new Uint8Array(0);
-      vscode.workspace.fs.writeFile(uri, content).then(() => this.openFile());
-    });
+  async createFile(path: string) {
+    const uri = Uri.file(path);
+    const directory = Uri.file(Path.dirname(path));
+    // Ensure parent dirs exist
+    await vscode.workspace.fs.createDirectory(directory);
+    // Create file
+    //  - Careful: Don't overwrite with an empty file if file already exists
+    const edit = new vscode.WorkspaceEdit();
+    edit.createFile(uri, { overwrite: false });
+    const applied = await vscode.workspace.applyEdit(edit);
+    if (applied) {
+      // Open file
+      await this.openFile(uri);
+    }
   }
 
-  openFile() {
-    this.dispose();
-
-    vscode.workspace.openTextDocument(this.currentPath).then((document) => {
-      vscode.window.showTextDocument(document);
-    });
+  async openFile(uri: Uri) {
+    const document = await vscode.workspace.openTextDocument(uri);
+    await vscode.window.showTextDocument(document);
   }
 }
