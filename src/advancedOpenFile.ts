@@ -228,7 +228,7 @@ export class AdvancedOpenFile {
   }
 
   async openFile(uri: Uri) {
-    const document = await vscode.workspace.openTextDocument(uri);
-    await vscode.window.showTextDocument(document);
+    // Use 'vscode.open' to support any filetype that vscode supports (text, notebook, image, etc.)
+    await vscode.commands.executeCommand("vscode.open", uri);
   }
 }
