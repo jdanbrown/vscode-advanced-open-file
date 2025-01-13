@@ -9,7 +9,7 @@
     "url": "https://github.com/jit-y/vscode-advanced-open-file"
   },
   "engines": {
-    "vscode": "^1.83.0"
+    "vscode": "^1.96.0"
   },
   "categories": [
     "Other"
@@ -113,7 +113,7 @@
     "@types/lodash": "^4.14.199",
     "@types/mocha": "^10.0.0",
     "@types/node": "^12.12.11",
-    "@types/vscode": "^1.83.0",
+    "@types/vscode": "^1.96.0",
     "@typescript-eslint/eslint-plugin": "^5.44.0",
     "@typescript-eslint/parser": "^5.44.0",
     "eslint": "^8.28.0",

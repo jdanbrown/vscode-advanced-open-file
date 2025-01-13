@@ -5,21 +5,41 @@ import { commands, ExtensionContext, Uri } from "vscode";
 import { AdvancedOpenFile, activeInstance } from "./advancedOpenFile";
 
 function dirForActiveEditorOrTerminal(): string | null {
-  // Get dir from active text/notebook editor
-  //  - activeTextEditor is undefined if there are no text editors
-  //  - activeNotebookEditor is undefined if there are no notebook editors
-  const activeEditorUri =
-    vscode.window.activeTextEditor?.document.uri ||
+  // Explicitly handle non-file uris
+  //  - e.g. uri='untitled:Untitled-1' for empty editors (cmd-n)
+  //    - Path.dirname('untitled:Untitled-1') === '.' (wrong)
+  function dirnameOfFileUri(uri: Uri): string | null {
+    return uri.scheme === "file" ? Path.dirname(uri.path) : null;
+  }
+
+  // Get dir from active editor (text/notebook) or terminal
+  //  - Fall-through logic: notebook first, then text editor, then terminal, else null (for workspace dir)
+  //    - HACK activeTerminal stays defined as the _last_ active terminal (ugh), so we use hackIsTerminalFocusedProbably
+  //      to try to distinguish "terminal is focused" vs. e.g. "Settings is focused", "Copilot Chat is focused", etc.
+  //    - When a notebook is focused, activeTextEditor uri points at the editor cell in the notebook, or undefined if no
+  //      cell is selected -- so check activeNotebookEditorUri before activeTextEditorUri
+  //    - When something unusual like an image is focused, activeTextEditor and activeNotebookEditor are both undefined
+  //      (but activeTerminal is maybe defined), so we reach into activeTab.input to figure out its uri
+  //    - Else, return null to indicate to the caller that they should fallback to the workspace dir
+  const activeTab = vscode.window.tabGroups.activeTabGroup.activeTab;
+  const activeTabInput = activeTab?.input;
+  const activeTabInputUri = (activeTabInput as { uri: Uri })?.uri;
+  const activeTextEditorUri = vscode.window.activeTextEditor?.document.uri;
+  const activeNotebookEditorUri =
     vscode.window.activeNotebookEditor?.notebook.uri;
-  const activeEditorDir =
-    activeEditorUri && activeEditorUri.scheme === "file"
-      ? Path.dirname(activeEditorUri.path)
-      : null;
-  // TODO Get cwd from active terminal -- which vscode tracks internally but doesn't yet expose
-  //  - Need: https://github.com/microsoft/vscode/issues/145234 Expose shell integration command knowledge to extensions
-  //  - Need: https://github.com/microsoft/vscode/issues/191924 Expose terminal's detected cwd to extensions
-  const activeTerminalCwd: string | null = null;
-  return activeEditorDir || activeTerminalCwd;
+  const activeTerminal = vscode.window.activeTerminal;
+  const activeTerminalCwdUri = activeTerminal?.shellIntegration?.cwd;
+  const hackIsTerminalFocusedProbably =
+    activeTerminal?.name === activeTab?.label;
+  return activeNotebookEditorUri
+    ? dirnameOfFileUri(activeNotebookEditorUri)
+    : activeTextEditorUri
+    ? dirnameOfFileUri(activeTextEditorUri)
+    : activeTabInputUri
+    ? dirnameOfFileUri(activeTabInputUri)
+    : activeTerminalCwdUri && hackIsTerminalFocusedProbably
+    ? activeTerminalCwdUri.path
+    : null;
 }
 
 async function pathToCurrentDirectory(): Promise<string> {
